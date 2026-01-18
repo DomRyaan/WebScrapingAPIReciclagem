@@ -1,96 +1,79 @@
-from bs4 import BeautifulSoup
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from constante import DISTRITOS_ID, CIDADE_DISTRITO
 import json
-        
+import re
+from bs4 import BeautifulSoup
+from typing import Optional, List, Dict
+
 class ColetaDados:
-    def __init__(self, selenium):
-        self.selenium = selenium
-        self.distrito_id_dic = {
-            'Aquiraz': 1987,
-            'Ecocaucaia': 2078,
-            'Ecofor': 2069,
-            'Ecoosasco': 1988,
-            'EcoRondônia': 2081,
-            'EcoTaubaté': 2075,
-            'Eusébio': 1994,
-            'Manaus': 1990,
-            'Natal': 2070,
-            'Taubaté': 2077
-        }
-        self.cidades_distrito = {
-            'Fortaleza': 'Ecofor',
-            'Caucaia': 'Ecocaucaia',
-            'Osasco': 'Ecoosasco',
-            'Rondonia': 'EcoRondônia',
-            'Taubate': 'EcoTaubaté',
-            'Eusebio': 'Eusébio',
-            'Natal': 'Natal',
-            'Taubaté': 'Taubaté'
-        }
+    def __init__(self):
+        pass
+
+    def _string_to_bs4(self, html_content: str) -> BeautifulSoup:
+        """Helper interno para converter string em objeto BeautifulSoup"""
+        return BeautifulSoup(html_content, 'html.parser')
+
+    def get_cidade_id(self, cidade: str) -> Optional[int]:
+        """Busca o ID da cidade de forma segura"""
+        cidade_upper = cidade.upper()
+        unidade_nome = CIDADE_DISTRITO.get(cidade_upper)
         
-    
-    def get_page_selenium(self, url):
-        driver = self.selenium.configurar_selenium()
-        try:
-            driver.get(url)
-            WebDriverWait(driver, 15)
-            page = driver.page_source
-        except TimeoutException:
-            print("Tempo esgotado esperando pelos resultados da busca")
+        if not unidade_nome:
             return None
-        return BeautifulSoup(page, 'html.parser')
-
-
-    def get_unidade_value(self, unidade):
-        return self.distrito_id_dic.get(unidade)
-
-    def get_cidade_id(self, cidade: str):        
-        unidade = self.cidades_distrito.get(cidade)
-        if unidade:
-            value_unidade = self.get_unidade_value(unidade)  
-            if value_unidade:
-                return value_unidade
-            else:
-                raise Exception("Aconteceu um erro")
-        else:
-            return
             
+        return DISTRITOS_ID.get(unidade_nome)
+
+    def get_bairro_id(self, html_content: str, nome_bairro: str) -> Optional[str]:
+        """
+        Recebe o HTML da página, procura o select de bairros e retorna o ID do bairro buscado.
+        """
+        soup = self._string_to_bs4(html_content)
+        nome_bairro_upper = nome_bairro.upper()
+        
+        # Procura o <select name="bairro">
+        select_bairro = soup.find('select', {'name': 'bairro'})
+        
+        if not select_bairro:
+            return None
+
+        # Itera sobre as opções para achar o bairro correto
+        for option in select_bairro.find_all('option'):
+            texto_opcao = option.get_text().upper()
             
-    def get_bairro_id(self, url, value_unidade, bairro: str):
-        bairro_upper = bairro.upper()
-        page = self.get_page_selenium(url + '/cidade/' + str(value_unidade))
-        bairros = page.find('select', {'name': 'bairro'}).find_all('option')
-        bairro_user = []
-        for opcao in bairros:
-            if bairro_upper in opcao.get_text():
-                bairro_user.append(opcao)
-        if len(bairro_user) > 0:
-            id = str(bairro_user[0]).split('\"')                                
-
-            return id[1]
-        else:
-            raise Exception(f"O bairro {bairro} não foi encontrado!")
+            if nome_bairro_upper in texto_opcao:
+                return option.get('value')
         
-    def get_json_coletas(self, url):
-        page = self.get_page_selenium(url)
-        scripts_page = page.find('script').get_text()
-        scripts_page_formatado = scripts_page.split("{")
-        return scripts_page_formatado[1].split('}')[0]
+        return None
 
-    def construir_url(self, url, cidade_id, bairro_id):
-        return url + '/cidade/' + str(cidade_id) + '/bairro/' + str(bairro_id)
-
-    def made_dict(self, arquivo_json_string: str):
-        dicionario_json = {}
-        json_string_completo = "{" + arquivo_json_string + "}"
+    def extrair_json_coletas(self, html_content: str) -> Dict:
+        """
+        Extrai o JSON que está escondido dentro de uma tag <script> na página.
+        """
+        soup = self._string_to_bs4(html_content)
         
-        try:
-            dicionario_json = json.loads(json_string_completo)
-            return dicionario_json
-        except json.JSONDecodeError as e:
-            print(f"Erro ao decodificar JSON: {e}")
-            print(f"String JSON tentada: {json_string_completo}")
-            raise
+        # Busca o script correto usando Regex ou conteúdo
+        scripts = soup.find_all('script')
+        
+        target_script = None
+        for script in scripts:
+            if script.string and "coletas" in script.string: 
+                target_script = script.string
+                break
+        
+        if not target_script:
+            raise ValueError("Script de dados não encontrado na página.")
+
+        # Regex para extrair apenas o objeto JSON
+        # O padrão abaixo busca conteúdo entre colchetes ou chaves
+        match = re.search(r'(\[.*?\]|\{.*?\})', target_script, re.DOTALL)
+        
+        if match:
+            json_str = match.group(1)
+            try:
+                return json.loads(json_str)
+            except json.JSONDecodeError:
+                pass
+
+        raise ValueError("Não foi possível decodificar o JSON do script.")
+
+    def construir_url(self, base_url: str, cidade_id: int, bairro_id: str) -> str:
+        return f"{base_url}/cidade/{cidade_id}/bairro/{bairro_id}"

@@ -2,12 +2,12 @@
 
 ## Descrição
 
-A **ColetaAPI** é uma API REST desenvolvida em Flask que utiliza técnicas de web scraping para coletar dados de agendamento de coleta de reciclagem do site da Marquise Ambiental. A API permite consultar horários e informações de coleta de lixo reciclável para diversas cidades e bairros suportados.
+A **ColetaAPI** é uma API REST desenvolvida em FastAPI que utiliza técnicas de web scraping para coletar dados de agendamento de coleta de reciclagem do site da Marquise Ambiental. A API permite consultar horários e informações de coleta de lixo reciclável para diversas cidades e bairros suportados, utilizando requisições HTTP assíncronas com httpx para maior velocidade e eficiência.
 
 ## Funcionalidades
 
 - **Consulta de Coletas**: Obtenha dados de coleta de reciclagem por cidade e bairro
-- **Web Scraping Automatizado**: Utiliza Selenium para navegação headless no site
+- **Web Scraping Automatizado**: Utiliza httpx para requisições HTTP assíncronas
 - **Resposta em JSON**: Retorna dados estruturados em formato JSON
 - **Suporte a Múltiplas Cidades**: Atualmente suporta cidades como Fortaleza, Caucaia, Osasco, entre outras
 
@@ -28,8 +28,6 @@ A **ColetaAPI** é uma API REST desenvolvida em Flask que utiliza técnicas de w
 ### Pré-requisitos
 
 - Python 3.8 ou superior
-- Google Chrome instalado (para Selenium)
-- ChromeDriver (gerenciado automaticamente pelo Selenium)
 
 ### Passos de Instalação
 
@@ -46,10 +44,10 @@ A **ColetaAPI** é uma API REST desenvolvida em Flask que utiliza técnicas de w
 
 3. Execute a aplicação:
    ```bash
-   python app.py
+   python main.py
    ```
 
-A API estará disponível em `http://localhost:5000`
+A API estará disponível em `http://localhost:8000`
 
 ## Uso
 
@@ -67,7 +65,7 @@ GET /coletas/<cidade>/<bairro>
 #### Exemplo de Requisição
 
 ```bash
-curl "http://localhost:5000/coletas/Fortaleza/Centro"
+curl "http://localhost:8000/coletas/Fortaleza/Centro"
 ```
 
 #### Exemplo de Resposta
@@ -91,28 +89,32 @@ curl "http://localhost:5000/coletas/Fortaleza/Centro"
 
 ```
 ColetaAPI/
-├── app.py              # Aplicação Flask principal
+├── main.py             # Aplicação FastAPI principal
 ├── coleta.py           # Lógica de coleta de dados
-├── selenium.py         # Configuração do Selenium
+├── requeste.py         # Cliente HTTP assíncrono para requisições
+├── constante.py        # Constantes e mapeamentos de cidades/distritos
 ├── README.md           # Este arquivo
 └── requirements.txt    # Dependências Python
 ```
 
 ## Dependências
 
-- **Flask**: Framework web para a API
-- **Selenium**: Automação de navegador para web scraping
+- **FastAPI**: Framework web moderno e rápido para APIs
+- **Uvicorn**: Servidor ASGI para FastAPI
+- **httpx**: Cliente HTTP assíncrono para Python
 - **BeautifulSoup4**: Parsing de HTML
-- **Chrome WebDriver**: Driver para navegação headless
 
 ## Desenvolvimento
 
 ### Executando em Modo de Desenvolvimento
 
 ```bash
-export FLASK_ENV=development
-python app.py
+fastapi dev main.py
 ```
+
+### Documentação da API
+
+A documentação interativa da API está disponível em `http://localhost:8000/docs` (Swagger UI) ou `http://localhost:8000/redoc` (ReDoc).
 
 ### Testes
 
