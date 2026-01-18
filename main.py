@@ -18,7 +18,6 @@ async def get_coletas(cidade: str, bairro: str):
         raise HTTPException(status_code=404, detail=f"Cidade '{cidade}' não encontrada.")
 
     try:
-        # Buscar ID do Bairro
         url_busca_bairro = f"{URL_BASE}/cidade/{cidade_id}"
         html_cidade = await request_client.get_page(url_busca_bairro)
                 
@@ -27,7 +26,6 @@ async def get_coletas(cidade: str, bairro: str):
         if not bairro_id:
              raise HTTPException(status_code=404, detail=f"Bairro '{bairro}' não encontrado nesta cidade.")
 
-        print(f"IDs encontrados - Cidade: {cidade_id}, Bairro: {bairro_id}")
         url_final = parser.construir_url(URL_BASE, cidade_id, bairro_id)
         html_final = await request_client.get_page(url_final)
         
@@ -38,5 +36,5 @@ async def get_coletas(cidade: str, bairro: str):
     except HTTPException:
         raise 
     except Exception as e:
-        print(f"Erro interno: {e}") # Log para você ver no terminal
+        print(f"Erro interno: {e}")
         raise HTTPException(status_code=500, detail="Erro interno ao processar dados da Marquise.")

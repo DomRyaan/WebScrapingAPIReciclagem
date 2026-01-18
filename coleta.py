@@ -2,7 +2,7 @@ from constante import DISTRITOS_ID, CIDADE_DISTRITO
 import json
 import re
 from bs4 import BeautifulSoup
-from typing import Optional, List, Dict
+from typing import Optional, Dict
 
 class ColetaDados:
     def __init__(self):
@@ -29,17 +29,16 @@ class ColetaDados:
         soup = self._string_to_bs4(html_content)
         nome_bairro_upper = nome_bairro.upper()
         
-        # Procura o <select name="bairro">
         select_bairro = soup.find('select', {'name': 'bairro'})
         
         if not select_bairro:
             return None
 
-        # Itera sobre as opções para achar o bairro correto
         for option in select_bairro.find_all('option'):
             texto_opcao = option.get_text().upper()
             
             if nome_bairro_upper in texto_opcao:
+                # Retorna o valor do atributo 'value' do option correspondente. Mais seguro.
                 return option.get('value')
         
         return None
@@ -50,9 +49,9 @@ class ColetaDados:
         """
         soup = self._string_to_bs4(html_content)
         
-        # Busca o script correto usando Regex ou conteúdo
         scripts = soup.find_all('script')
         
+
         target_script = None
         for script in scripts:
             if script.string and "coletas" in script.string: 
@@ -63,7 +62,6 @@ class ColetaDados:
             raise ValueError("Script de dados não encontrado na página.")
 
         # Regex para extrair apenas o objeto JSON
-        # O padrão abaixo busca conteúdo entre colchetes ou chaves
         match = re.search(r'(\[.*?\]|\{.*?\})', target_script, re.DOTALL)
         
         if match:
